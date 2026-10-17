@@ -46,16 +46,23 @@ function calculateTotalSaves(gkStats) {
   }, 0);
 }
 
+// ==========================================
+// RENDER PRINCIPAL E ABAS (3 Abas)
+// ==========================================
 window.renderJogo = function() {
   let html = `<div class="topbar"><h1 style="font-size:18px;">DIA DE JOGO</h1></div>`;
   
-  html += `<div class="seg" style="margin:10px 16px;">
-    <div class="seg-btn ${window.jogoSubTab==='ativo'?'active':''}" onclick="window.jogoSubTab='ativo'; render();">⚽ Jogo Ativo</div>
+  html += `
+  <div class="seg" style="margin:10px 16px;">
+    <div class="seg-btn ${window.jogoSubTab==='ativo'?'active':''}" onclick="window.jogoSubTab='ativo'; render();">⚽ Ativo</div>
+    <div class="seg-btn ${window.jogoSubTab==='agendados'?'active':''}" onclick="window.jogoSubTab='agendados'; render();">📅 Agendados</div>
     <div class="seg-btn ${window.jogoSubTab==='historico'?'active':''}" onclick="window.jogoSubTab='historico'; render();">📋 Histórico</div>
   </div>`;
   
   if (window.jogoSubTab === 'ativo') {
     html += renderJogoAtivo();
+  } else if (window.jogoSubTab === 'agendados') {
+    html += renderJogoAgendados();
   } else {
     html += renderJogoHistorico();
   }
@@ -63,70 +70,237 @@ window.renderJogo = function() {
   return html;
 };
 
+// ==========================================
+// 1. ABA: JOGO ATIVO
+// ==========================================
 function renderJogoAtivo() {
-  if (!gkMatchSession) return renderJogoSetup();
+  if (!gkMatchSession) {
+    return `
+      <div class="empty">
+        <div style="font-size:30px; margin-bottom:10px;">⚽</div>
+        Nenhum jogo a decorrer neste momento.<br><br>
+        Vai à aba <b>📅 Agendados</b> para planeares ou iniciares um jogo.
+      </div>
+    `;
+  }
   if (gkMatchSession.status === 'finished') return renderJogoFinished();
   return renderJogoActive();
 }
 
-function renderJogoSetup() {
+// ==========================================
+// 2. ABA: AGENDADOS E CALENDÁRIO
+// ==========================================
+window.showSchedForm = window.showSchedForm || false;
+window.expandedSchedMatch = window.expandedSchedMatch || null;
+window.editingSchedMatch = window.editingSchedMatch || null;
+
+function renderJogoAgendados() {
   const gkRoster = (state.gkRoster || []).filter(p => p.active !== false);
-  if (gkRoster.length === 0) return `<div class="empty">🧤 Nenhum GR no plantel.<br>Adiciona guarda-redes na aba <b>Equipa</b> primeiro.</div>`;
+  const upcoming = state.upcomingMatches || [];
+  let html = '<div style="padding:0 16px;">';
+
+  // LISTA DE JOGOS AGENDADOS (Compacta e expansível)
+  if (upcoming.length > 0) {
+    html += `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">`;
+    upcoming.forEach(m => {
+      const isExpanded = window.expandedSchedMatch === m.id;
+      const isEditing = window.editingSchedMatch === m.id;
+
+      if (isEditing) {
+        // FORMULÁRIO DE EDIÇÃO INLINE
+        html += `
+          <div class="card" style="margin:0; padding:12px; border:1px solid var(--gold);" onclick="event.stopPropagation();">
+            <h3 style="color:var(--gold); margin:0 0 12px 0; font-size:13px;">✏️ Editar Agendamento</h3>
+            <div class="field">
+              <label>Data</label>
+              <input type="date" id="edit-sched-date-${m.id}" value="${m.date}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div class="field">
+              <label>Adversário</label>
+              <input type="text" id="edit-sched-opp-${m.id}" value="${escapeHTML(m.opponent)}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div class="field">
+                <label>Local</label>
+                <select id="edit-sched-loc-${m.id}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+                  <option value="casa" ${m.location === 'casa' ? 'selected' : ''}>🏠 Casa</option>
+                  <option value="fora" ${m.location === 'fora' ? 'selected' : ''}>✈️ Fora</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Competição</label>
+                <select id="edit-sched-comp-${m.id}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+                  <option value="campeonato" ${m.competition === 'campeonato' ? 'selected' : ''}>Campeonato</option>
+                  <option value="amigavel" ${m.competition === 'amigavel' ? 'selected' : ''}>Amigável</option>
+                  <option value="torneio" ${m.competition === 'torneio' ? 'selected' : ''}>Torneio</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn-gold" style="flex:1;" onclick="window.saveScheduledMatch('${m.id}')">💾 Guardar</button>
+              <button class="btn btn-outline" style="flex:1;" onclick="window.editingSchedMatch=null; render();">Cancelar</button>
+            </div>
+          </div>
+        `;
+      } else {
+        // CARD NORMAL COMPACTO
+        html += `
+          <div class="card" style="margin:0; padding:12px; cursor:pointer; border:1px solid ${isExpanded ? 'var(--gold)' : 'transparent'};" onclick="window.expandedSchedMatch = window.expandedSchedMatch === '${m.id}' ? null : '${m.id}'; window.editingSchedMatch = null; render();">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-weight:bold; color:${isExpanded ? 'var(--gold)' : 'var(--chalk)'}; font-size:14px;">${escapeHTML(m.opponent)}</div>
+                <div style="font-size:11px; color:var(--muted); margin-top:2px;">${m.competition} • ${m.location === 'casa' ? '🏠 Casa' : '✈️ Fora'}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="color:var(--gold); font-size:12px; font-weight:bold;">${m.date.split('-').reverse().join('/')}</div>
+                <div style="font-size:10px; color:var(--muted); margin-top:2px;">${isExpanded ? '▼ Ocultar' : '▶ Abrir'}</div>
+              </div>
+            </div>
+        `;
+        
+        // ZONA EXPANDIDA (INICIAR JOGO E AÇÕES)
+        if (isExpanded) {
+          html += `
+            <div style="border-top:1px solid var(--line); margin-top:12px; padding-top:12px;" onclick="event.stopPropagation();">
+              <div class="field">
+                <label>Guarda-Redes Titular</label>
+                <select id="starter-${m.id}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+                  <option value="">-- Escolher GR --</option>
+                  ${gkRoster.map(gk => `<option value="${gk.id}">${gk.number ? gk.number+' - ' : ''}${escapeHTML(gk.name)}</option>`).join('')}
+                </select>
+              </div>
+              <div style="display:flex; gap:6px;">
+                <button class="btn btn-gold" style="flex:2;" onclick="window.startScheduledMatch('${m.id}')">⚽ INICIAR JOGO</button>
+                <button class="btn btn-outline" style="flex:1;" onclick="window.editingSchedMatch='${m.id}'; render();">✏️ Editar</button>
+                <button class="btn btn-outline" style="flex:1; border-color:var(--red); color:var(--red);" onclick="window.deleteScheduledMatch('${m.id}')">🗑️ Eliminar</button>
+              </div>
+            </div>
+          `;
+        }
+        html += `</div>`;
+      }
+    });
+    html += `</div>`;
+  } else {
+    html += `<div class="empty" style="margin-top:0;">📅 Nenhum jogo agendado.</div>`;
+  }
+
+  // BOTÃO PARA MOSTRAR FORMULÁRIO DE NOVO JOGO
+  if (!window.showSchedForm) {
+    html += `<button class="btn btn-outline" style="width:100%; margin-bottom:16px;" onclick="window.showSchedForm=true; window.expandedSchedMatch=null; window.editingSchedMatch=null; render();">➕ AGENDAR NOVO JOGO</button>`;
+  } else {
+    // FORMULÁRIO DE NOVO AGENDAMENTO
+    html += `
+      <div class="card" style="margin:0 0 16px 0;">
+        <h3 style="color:var(--gold); margin:0 0 12px 0; font-size:14px;">➕ Novo Agendamento</h3>
+        <div class="field">
+          <label>Data do Jogo</label>
+          <input type="date" id="gk-date-sched" value="${new Date().toISOString().slice(0,10)}" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+        <div class="field">
+          <label>Adversário</label>
+          <input type="text" id="gk-opp-sched" placeholder="Nome do adversário" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="field">
+            <label>Local</label>
+            <select id="gk-location-sched" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+              <option value="casa">🏠 Casa</option>
+              <option value="fora">✈️ Fora</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Competição</label>
+            <select id="gk-competition-sched" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
+              <option value="campeonato">Campeonato</option>
+              <option value="amigavel">Amigável</option>
+              <option value="torneio">Torneio</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-gold" style="flex:2;" onclick="window.scheduleMatch()">📅 GUARDAR</button>
+          <button class="btn btn-outline" style="flex:1;" onclick="window.showSchedForm=false; render();">Cancelar</button>
+        </div>
+      </div>
+    `;
+  }
   
-  return `
-    <div class="card">
-      <h3 style="color:var(--gold); margin:0 0 12px 0; font-size:14px;">️ Configurar Jogo</h3>
-      <div class="field">
-        <label>Adversário</label>
-        <input type="text" id="gk-opp" placeholder="Nome do adversário" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-      </div>
-      <div class="field">
-        <label>Local</label>
-        <select id="gk-location" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-          <option value="casa">🏠 Casa</option>
-          <option value="fora">✈️ Fora</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Competição</label>
-        <select id="gk-competition" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-          <option value="campeonato">Campeonato</option>
-          <option value="amigavel">Amigável</option>
-          <option value="torneio">Torneio</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>GR Titular</label>
-        <select id="gk-starter" style="width:100%; padding:10px; background:var(--surface-2); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-          ${gkRoster.map(gk => `<option value="${gk.id}">${gk.number ? gk.number + ' - ' : ''}${escapeHTML(gk.name)}</option>`).join('')}
-        </select>
-      </div>
-      <button class="btn btn-gold" style="width:100%; margin-top:12px;" onclick="window.startGKMatch()">🟢 INICIAR JOGO</button>
-    </div>
-  `;
+  html += '</div>';
+  return html;
 }
 
-window.startGKMatch = function() {
-  const opp = document.getElementById('gk-opp').value.trim();
-  const location = document.getElementById('gk-location').value;
-  const competition = document.getElementById('gk-competition').value;
-  const starterId = document.getElementById('gk-starter').value;
-  
-  let totalDuration = state.gameMode === 'futsal' ? (state.defaultHalfDuration || 20) * 2 : (state.defaultHalfDuration || 45) * 2;
+window.scheduleMatch = function() {
+  const date = document.getElementById('gk-date-sched').value || new Date().toISOString().slice(0,10);
+  const opp = document.getElementById('gk-opp-sched').value.trim();
+  const location = document.getElementById('gk-location-sched').value;
+  const competition = document.getElementById('gk-competition-sched').value;
 
   if (!opp) { showToast('Introduz o adversário!'); return; }
+
+  if (!state.upcomingMatches) state.upcomingMatches = [];
+  state.upcomingMatches.push({ id: uid(), date, opponent: opp, location, competition });
+  saveState(); 
+  window.showSchedForm = false; // Esconde o form depois de agendar
+  render(); 
+  showToast('📅 Jogo agendado com sucesso!');
+};
+
+window.saveScheduledMatch = function(id) {
+  const match = state.upcomingMatches.find(m => m.id === id);
+  if (!match) return;
+  
+  match.date = document.getElementById(`edit-sched-date-${id}`).value || match.date;
+  match.opponent = document.getElementById(`edit-sched-opp-${id}`).value.trim() || match.opponent;
+  match.location = document.getElementById(`edit-sched-loc-${id}`).value;
+  match.competition = document.getElementById(`edit-sched-comp-${id}`).value;
+
+  saveState();
+  window.editingSchedMatch = null;
+  render();
+  showToast('✅ Agendamento atualizado!');
+};
+
+window.deleteScheduledMatch = function(id) {
+  if (!confirm('Apagar este agendamento?')) return;
+  state.upcomingMatches = state.upcomingMatches.filter(m => m.id !== id);
+  saveState(); 
+  render(); 
+  showToast('🗑️ Agendamento removido.');
+};
+
+window.startScheduledMatch = function(id) {
+  const match = state.upcomingMatches.find(m => m.id === id);
+  if (!match) return;
+  
+  const starterId = document.getElementById(`starter-${id}`).value;
+  if (!starterId) { showToast('Escolhe o GR Titular primeiro!'); return; }
+
   const starter = state.gkRoster.find(p => p.id === starterId);
   if (!starter) return;
-  
+
+  let totalDuration = state.gameMode === 'futsal' ? (state.defaultHalfDuration || 20) * 2 : (state.defaultHalfDuration || 45) * 2;
+
   gkMatchSession = {
-    id: uid(), date: new Date().toISOString().slice(0,10), opponent: opp, location, competition,
+    id: match.id, date: match.date, opponent: match.opponent, location: match.location, competition: match.competition,
     totalDuration: totalDuration, status: 'active', activeGKId: starterId,
     gkStats: { [starterId]: createGKStats(starterId, 0) },
     substitutions: [], cards: []
   };
-  render();
+
+  // Remove dos agendados
+  state.upcomingMatches = state.upcomingMatches.filter(m => m.id !== id);
+  saveState(); 
+  
+  // MAGIA: Muda para a Aba Ativo automaticamente!
+  window.jogoSubTab = 'ativo'; 
+  render(); 
   showToast(`Jogo iniciado! ${starter.name} na baliza.`);
 };
+
+// ==========================================
+// LÓGICA DE JOGO ATIVO (CONTADORES E DADOS)
+// ==========================================
 
 function createGKStats(playerId, startMinute) {
   const stats = {
@@ -185,9 +359,18 @@ function renderJogoActive() {
     <div class="card">
       <h3 style="color:var(--gold); margin:0 0 10px 0; font-size:13px;">⚽ Golos Marcados (GR)</h3>
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">
-        <button class="btn btn-outline" style="font-size:10px; padding:8px 4px;" onclick="window.registerGoalScored('5vs4')">5vs4</button>
-        <button class="btn btn-outline" style="font-size:10px; padding:8px 4px;" onclick="window.registerGoalScored('remate-defensivo')">Remate Def.</button>
-        <button class="btn btn-outline" style="font-size:10px; padding:8px 4px;" onclick="window.registerGoalScored('remate-ofensivo')">Remate Of.</button>
+        <button class="btn btn-outline" style="font-size:10px; padding:6px 4px; display:flex; flex-direction:column; align-items:center;" onclick="window.registerGoalScored('5vs4')">
+          <span style="color:var(--muted); margin-bottom:2px;">5vs4</span>
+          <b style="font-size:18px; color:var(--chalk);">${stats.goalsScored['5vs4'] || 0}</b>
+        </button>
+        <button class="btn btn-outline" style="font-size:10px; padding:6px 4px; display:flex; flex-direction:column; align-items:center;" onclick="window.registerGoalScored('remate-defensivo')">
+          <span style="color:var(--muted); margin-bottom:2px;">Remate Def.</span>
+          <b style="font-size:18px; color:var(--chalk);">${stats.goalsScored['remate-defensivo'] || 0}</b>
+        </button>
+        <button class="btn btn-outline" style="font-size:10px; padding:6px 4px; display:flex; flex-direction:column; align-items:center;" onclick="window.registerGoalScored('remate-ofensivo')">
+          <span style="color:var(--muted); margin-bottom:2px;">Remate Of.</span>
+          <b style="font-size:18px; color:var(--chalk);">${stats.goalsScored['remate-ofensivo'] || 0}</b>
+        </button>
       </div>
     </div>
     
@@ -430,7 +613,7 @@ function showGoalZoneModal() {
 }
 
 // ==========================================
-// A NOVA BALIZA EM 3D
+// A NOVA BALIZA EM 3D E ANÁLISES (INALTERADO)
 // ==========================================
 window.renderGoalSVG = function(zones = {}, clickable = false, size = 240) {
   const w = size, h = Math.round(size * 0.6);
@@ -644,7 +827,7 @@ window.newGKMatch = function() { gkMatchSession = null; window.jogoSubTab = 'ati
 
 function renderJogoHistorico() {
   const matches = (state.gkMatches || []).sort((a, b) => new Date(b.date) - new Date(a.date));
-  if (matches.length === 0) return `<div class="empty">📋 Nenhum jogo gravado ainda.<br>Inicia um jogo na aba "Jogo Ativo".</div>`;
+  if (matches.length === 0) return `<div class="empty">📋 Nenhum jogo gravado ainda.<br>Inicia um jogo na aba "Agendados".</div>`;
   
   let html = `<div style="padding:0 16px; display:flex; flex-direction:column; gap:10px;">`;
   matches.forEach(m => {
@@ -816,15 +999,19 @@ window.printMatchPDF = function(matchId) {
         const score = stats.score || calculateGKScore(stats);
         const scoreColor = score >= 70 ? '#16A34A' : (score >= 40 ? '#D97706' : '#DC2626');
         
+        // Verifica os golos marcados neste jogo
+        const gs = stats.goalsScored || {};
+        const matchGoals = (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
+        
         return `
           <div style="border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; page-break-inside:avoid;">
             <h2 style="color:#D9A441; margin:0 0 8px 0; font-size:16px; border-bottom:2px solid #0E211A; padding-bottom:4px;">
               🧤 ${gk ? escapeHTML(gk.name) : 'GR'} ${gk && gk.number ? '(Nº'+gk.number+')' : ''}<span style="float:right; color:${scoreColor}; font-size:14px;">${score}%</span>
             </h2>
             <div style="font-size:11px; color:#6B7280; margin-bottom:10px;">⏱️ ${totalMinutes}' em campo (${periodsStr})</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr ${matchGoals > 0 ? '1fr' : ''}; gap:8px; margin-bottom:12px;">
               <div style="background:#FEF2F2; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS SOFRIDOS</div><div style="font-size:20px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div></div>
-              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>
+              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>${matchGoals > 0 ? `<div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS MARCADOS</div><div style="font-size:20px; font-weight:bold; color:#0E211A;">${matchGoals} ⚽</div></div>` : ''}
             </div>
             <div style="margin-bottom:12px;">
               <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">🥅 Golos Sofridos por Zona</h3>

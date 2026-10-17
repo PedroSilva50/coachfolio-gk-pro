@@ -492,35 +492,34 @@ function calculateGKAvgScore(gkId) {
 }
 
 function calculateGKFullStats(gkId) {
-  const matches = (state.gkMatches || []).filter(m =>
-    m.gkStats && m.gkStats[gkId]
-  );
-  let totalMinutes = 0;
-  let totalGoalsConceded = 0;
-  let totalSaves = 0;
-  let totalScore = 0;
-  
+  const matches = (state.gkMatches || []).filter(m => m.gkStats && m.gkStats[gkId]);
+  let totalMinutes = 0; let totalGoalsConceded = 0; let totalSaves = 0; let totalScore = 0; let totalGoalsScored = 0;
+
   matches.forEach(m => {
     const stats = m.gkStats[gkId];
     totalMinutes += stats.periods.reduce((sum, p) => sum + ((p.end || m.totalDuration) - p.start), 0);
     totalGoalsConceded += stats.goalsConceded || 0;
-    
-    // Calcular defesas somando os contadores
+
     const saveActions = ['parede', 'queda', 'barreirista', 'def_alta', '1vs1', 'inferioridades'];
     const saves = saveActions.reduce((total, actionId) => {
       const c = stats.counters?.[actionId] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
       return total + c.error + c.insufficient + c.correct + c.excellent;
     }, 0);
     totalSaves += saves;
-    
+
+    // Soma os golos marcados
+    const gs = stats.goalsScored || {};
+    totalGoalsScored += (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
+
     totalScore += stats.score || 0;
   });
-  
+
   return {
     matches: matches.length,
     minutes: totalMinutes,
     goalsConceded: totalGoalsConceded,
     saves: totalSaves,
+    goalsScored: totalGoalsScored,
     avgScore: matches.length > 0 ? Math.round(totalScore / matches.length) : 0
   };
 }
@@ -715,22 +714,26 @@ window.exportGKPDF = function(gkId) {
       
       <!-- RESUMO ESTATÍSTICO --> 
       <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">📊 Resumo Estatístico</h3> 
-      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-bottom:16px; text-align:center;"> 
+      <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px; text-align:center;"> 
         <div style="background:#F3F4F6; border-radius:6px; padding:10px;"> 
-          <div style="font-size:20px; font-weight:bold; color:#0E211A;">${stats.matches}</div> 
-          <div style="font-size:9px; color:#6B7280; text-transform:uppercase;">Jogos</div> 
+          <div style="font-size:16px; font-weight:bold; color:#0E211A;">${stats.matches}</div> 
+          <div style="font-size:8px; color:#6B7280; text-transform:uppercase;">Jogos</div> 
         </div> 
         <div style="background:#F3F4F6; border-radius:6px; padding:10px;"> 
-          <div style="font-size:20px; font-weight:bold; color:#0E211A;">${stats.minutes}'</div> 
-          <div style="font-size:9px; color:#6B7280; text-transform:uppercase;">Minutos</div> 
+          <div style="font-size:16px; font-weight:bold; color:#0E211A;">${stats.minutes}'</div> 
+          <div style="font-size:8px; color:#6B7280; text-transform:uppercase;">Mins</div> 
         </div> 
         <div style="background:#FEF2F2; border-radius:6px; padding:10px;"> 
-          <div style="font-size:20px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div> 
-          <div style="font-size:9px; color:#6B7280; text-transform:uppercase;">Golos Sofridos</div> 
+          <div style="font-size:16px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div> 
+          <div style="font-size:8px; color:#6B7280; text-transform:uppercase;">Sofridos</div> 
         </div> 
         <div style="background:#F0FDF4; border-radius:6px; padding:10px;"> 
-          <div style="font-size:20px; font-weight:bold; color:#16A34A;">${stats.saves}</div> 
-          <div style="font-size:9px; color:#6B7280; text-transform:uppercase;">Defesas</div> 
+          <div style="font-size:16px; font-weight:bold; color:#16A34A;">${stats.saves}</div> 
+          <div style="font-size:8px; color:#6B7280; text-transform:uppercase;">Defesas</div> 
+        </div> 
+        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:6px; padding:10px;">
+          <div style="font-size:16px; font-weight:bold; color:#0E211A;">${stats.goalsScored} ⚽</div>
+          <div style="font-size:8px; color:#6B7280; text-transform:uppercase;">Marcados</div>
         </div> 
       </div> 
       
