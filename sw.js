@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coachfolio-gkpro-v1';
+const CACHE_NAME = 'coachfolio-gkpro-v1a';
 const urlsToCache = [
   './',
   './index.html',
