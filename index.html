@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0E211A">
+<title>CoachFolio GK Pro</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg: #0E211A;
+  --surface: #142E24;
+  --surface-2: #1A3A2E;
+  --line: #2A4A3E;
+  --chalk: #F3EFE6;
+  --muted: #8FA79B;
+  --gold: #D9A441;
+  --gold-dim: rgba(217, 164, 65, 0.15);
+  --red: #C8493F;
+  --green: #4CAF50;
+  --yellow: #F9C74F;
+  --blue: #4A90D9;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--chalk);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: 70px;
+}
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; }
+
+/* NAVBAR */
+#navbar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: flex; justify-content: space-around;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+.nav-btn {
+  flex: 1; background: none; border: none; color: var(--muted);
+  font-size: 10px; padding: 6px 4px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: color 0.2s;
+}
+.nav-btn.active { color: var(--gold); }
+.nav-btn svg { width: 22px; height: 22px; }
+
+/* TOPBAR */
+.topbar {
+  text-align: center; padding: 20px 16px 16px;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+}
+.topbar h1 {
+  font-size: 26px; letter-spacing: 0.08em; color: var(--chalk);
+  margin: 12px 0 4px 0; font-weight: 800;
+}
+.topbar .subtitle {
+  font-size: 11px; color: var(--gold); letter-spacing: 0.15em;
+  text-transform: uppercase; font-weight: 600;
+}
+.topbar .author {
+  font-size: 10px; color: var(--muted); margin-top: 4px;
+  font-style: italic;
+}
+
+/* CARDS */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 10px 16px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.card-title {
+  font-size: 13px; color: var(--gold); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* BUTTONS */
+.btn {
+  padding: 10px 16px; border-radius: 8px; border: none;
+  font-weight: 700; font-size: 13px; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn:active { opacity: 0.7; }
+.btn-gold { background: var(--gold); color: #000; }
+.btn-outline { background: transparent; border: 1px solid var(--gold); color: var(--gold); }
+.btn-danger { background: var(--red); color: #fff; }
+
+/* SEGMENTED CONTROL */
+.seg {
+  display: flex; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px;
+  overflow: hidden; margin: 10px 16px;
+}
+.seg-btn {
+  flex: 1; padding: 10px; text-align: center;
+  font-size: 12px; font-weight: 600; color: var(--muted);
+  cursor: pointer; transition: all 0.2s;
+}
+.seg-btn.active { background: var(--gold-dim); color: var(--gold); }
+
+/* FORMS */
+.field { margin-bottom: 10px; }
+.field input, .field select, .field textarea {
+  width: 100%; padding: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+  color: var(--chalk); border-radius: 8px; font-size: 13px;
+}
+.field label {
+  display: block; font-size: 10px; color: var(--muted);
+  text-transform: uppercase; margin-bottom: 4px; font-weight: 700;
+}
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--surface-2); color: var(--chalk);
+  padding: 10px 20px; border-radius: 8px; font-size: 12px;
+  border: 1px solid var(--gold); z-index: 200;
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+#toast.show { opacity: 1; }
+
+/* EMPTY STATE */
+.empty {
+  text-align: center; padding: 40px 20px;
+  color: var(--muted); font-size: 13px; line-height: 1.6;
+}
+
+/* FOOTER */
+.footer {
+  text-align: center; padding: 20px 16px 40px;
+  font-size: 10px; color: var(--muted);
+}
+.footer a { color: var(--gold); text-decoration: none; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal-card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 20px; width: 100%; max-width: 400px;
+}
+
+/* ADD ROW */
+.add-row {
+  display: flex; gap: 8px; margin: 10px 16px;
+}
+.add-row input {
+  flex: 1; padding: 10px; background: var(--surface-2);
+  border: 1px solid var(--line); color: var(--chalk);
+  border-radius: 8px; font-size: 13px;
+}
+.add-row button {
+  width: 40px; background: var(--gold); color: #000;
+  border: none; border-radius: 8px; font-size: 18px; font-weight: bold;
+  cursor: pointer;
+}
+
+/* PRINT AREA */
+@media print {
+  body * { 
+    visibility: hidden; 
+  }
+  #print-area, #print-area * { 
+    visibility: visible; 
+  }
+  #print-area {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="modal-root"></div>
+<div id="toast"></div>
+<div id="print-area"></div>
+
+<!-- NAVBAR (5 abas GK Pro) -->
+<nav id="navbar" style="display:none;">
+  <button class="nav-btn active" onclick="navigate('home')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9"/><path d="M9 21V12h6v9"/></svg>
+    Início
+  </button>
+  <button class="nav-btn" onclick="navigate('planeamento')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Planeamento
+  </button>
+  <button class="nav-btn" onclick="navigate('jogo')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+    Jogo
+  </button>
+  <button class="nav-btn" onclick="navigate('tatica')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+    Tática
+  </button>
+  <button class="nav-btn" onclick="navigate('equipa')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+    Equipa
+  </button>
+</nav>
+
+<!-- SCRIPTS GK PRO -->
+<script src="js/storage.js"></script>
+<script>
+  if (typeof state !== 'undefined') {
+    if (!state.gameMode) state.gameMode = 'futsal'; // Padrão
+    if (!state.defaultHalfDuration) state.defaultHalfDuration = 20;
+  }
+</script>
+<script src="js/jogo.js?v=2"></script>
+<script src="js/equipa.js"></script>
+<script src="js/modulo_gr.js"></script>
+<script src="js/vistas.js"></script>
+<script src="js/planeamento.js"></script>
+<script src="js/tatica.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// ==========================================
+// COACHFOLIO GK PRO — Core
+// ==========================================
+
+// Estado global GK Pro
+if (typeof state === 'undefined') {
+  state = {
+    schemaVersion: 1,
+    isActivated: false,
+    currentSeason: '25/26',
+    teamColor: '#D9A441',
+    oppColor: '#C8493F',
+    theme: 'original',
+    lang: 'pt',
+    myClubName: '',
+    escalao: '',
+    sport: 'futebol', // 'futebol' ou 'futsal'
+    gkRoster: [],
+    gkMatches: [],
+    gkEvaluations: [],
+    trainings: [],
+    schedule: [],
+    tactics: [],
+    tacticFormat: 11,
+    trackSubs: true,
+    defaultHalfDuration: 45,
+    lastBackupDate: null
+  };
+}
+
+// SVG da Luva Premium (Identidade CoachFolio GK Pro - Dedos Unidos e Polegar Afinado)
+function gloveIconSvg(size = 90) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- 1. ESCUDO (Fundo Hexagonal) -->
+    <path d="M50 4 L88 22 L88 78 L50 96 L12 78 L12 22 Z" fill="var(--surface-2)" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- 2. LUVA (Segundo Plano - Mão aberta, dedos unidos) -->
+    <path d="M 35 85 
+             L 31 60 
+             L 24 53 C 20 49, 21 43, 25 42 C 29 41, 31 45, 31 49 
+             L 31 28 C 31 22, 39 22, 39 28 
+             L 39 24 C 39 18, 47 18, 47 24 
+             L 47 26 C 47 20, 55 20, 55 26 
+             L 55 32 C 55 26, 63 26, 63 32 
+             L 63 55 L 55 85 Z" 
+          fill="var(--gold)" stroke="var(--bg)" stroke-width="2" stroke-linejoin="round"/>
+    
+    <!-- Linhas de separação dos dedos (O efeito colado) -->
+    <path d="M 39 28 L 39 48 M 47 24 L 47 48 M 55 26 L 55 48" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Linha de vinco na palma da luva -->
+    <path d="M 31 58 Q 40 65 52 58" fill="none" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/>
+    
+    <!-- Detalhes do aperto do pulso -->
+    <path d="M 33 72 L 56 72 M 34 78 L 55 78" stroke="var(--bg)" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- 3. BOLA DE FUTEBOL (Primeiro Plano) -->
+    <!-- Contorno extra-grosso para cortar a luva com perfeição -->
+    <circle cx="65" cy="65" r="21" fill="var(--chalk)" stroke="var(--bg)" stroke-width="3.5"/>
+    
+    <!-- Gomo Central da Bola -->
+    <path d="M 65 55 L 74 61 L 71 72 L 59 72 L 56 61 Z" fill="var(--bg)" stroke="var(--bg)" stroke-width="1.5" stroke-linejoin="round"/>
+    
+    <!-- Linhas da Bola (A ligar aos cantos) -->
+    <path d="M 65 55 L 65 44 M 74 61 L 84 57 M 71 72 L 78 81 M 59 72 L 52 81 M 56 61 L 46 57" stroke="var(--bg)" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`;
+}
+
+// Navegação
+let currentView = 'home';
+   Object.defineProperty(window, 'currentTab', { get: () => currentView, set: v => { currentView = v; }, configurable: true });
+function navigate(view) {
+  currentView = view;
+  document.querySelectorAll('.nav-btn').forEach((btn, i) => {
+    const views = ['home', 'planeamento', 'jogo', 'tatica', 'equipa'];
+    btn.classList.toggle('active', views[i] === view);
+  });
+  render();
+}
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// UID
+function uid() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+
+// Helper: Escape HTML
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>'"]/g, tag => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[tag] || tag));
+}
+
+// Compatibilidade: Devolve os GRs como "Jogadores Elegíveis" para o Quadro Tático
+window.eligiblePlayers = function() {
+  return (state.gkRoster || []).filter(p => p.active !== false);
+};
+
+// Compatibilidade de cor: Devolve preto ou branco consoante o contraste do fundo
+window.getContrastColor = function(hex) {
+  let h = String(hex || '').replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (h.length !== 6) return '#000000';
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#000000' : '#FFFFFF';
+};
+
+// Render principal CORRETO E LIMPO
+function render() {
+  const app = document.getElementById('app');
+  const nav = document.getElementById('navbar');
+  
+  if (!state.isActivated) {
+    nav.style.display = 'none';
+    app.innerHTML = renderActivationScreen();
+    return;
+  }
+  
+  nav.style.display = 'flex';
+  
+  switch(currentView) {
+    case 'home':
+      // Chama a função renderHome() definida no vistas.js ou equipa.js
+      // Garante que tens lá a versão com os 4 módulos e o ícone ⚙️
+      app.innerHTML = (typeof renderHome === 'function') 
+        ? renderHome() 
+        : '<div class="empty">🏠 Página Inicial não encontrada.</div>';
+      break;
+      
+    case 'planeamento': 
+      app.innerHTML = (typeof window.renderPlaneamento === 'function') 
+        ? window.renderPlaneamento() 
+        : '<div class="topbar"><h1 style="font-size:18px;">PLANEAMENTO</h1></div><div class="empty">Módulo em desenvolvimento...<br><br>Microciclo, Mesociclo & Treinos</div>';
+      break;
+      
+    case 'jogo': 
+      app.innerHTML = (typeof window.renderJogo === 'function') 
+        ? window.renderJogo() 
+        : '<div class="topbar"><h1 style="font-size:18px;">DIA DE JOGO</h1></div><div class="empty">Módulo em desenvolvimento...</div>';
+      break;
+      
+    case 'tatica': 
+      app.innerHTML = (typeof window.renderTatica === 'function') 
+        ? window.renderTatica() 
+        : '<div class="empty">⚠️ Erro: Módulo Tática não carregado.</div>';
+      break;
+      
+    case 'equipa': 
+      app.innerHTML = (typeof window.renderEquipa === 'function') 
+        ? window.renderEquipa() 
+        : '<div class="topbar"><h1 style="font-size:18px;">EQUIPA</h1></div><div class="empty">🚧 Módulo em desenvolvimento...</div>';
+      break;
+      
+    default: 
+      currentView = 'home';
+      render();
+  }
+}
+
+function renderActivationScreen() {
+  return `
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; padding:20px; background:var(--bg); color:var(--chalk); text-align:center;">
+      <div style="margin-bottom:16px;">${gloveIconSvg(80)}</div>
+      <h1 style="color:var(--chalk); margin:0 0 4px 0; font-size:26px; letter-spacing:0.08em; font-weight:800;">COACHFOLIO</h1>
+      <p style="color:var(--gold); font-size:12px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.15em; font-weight:600;">GK PRO</p>
+      <p style="color:var(--muted); font-size:10px; margin-bottom:24px; text-transform:uppercase; letter-spacing:1px;">A app do Treinador de Guarda-Redes</p>
+      <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; width:100%; max-width:320px;">
+        <p style="font-size:12px; margin-top:0; margin-bottom:20px; color:var(--chalk);">Para usares a aplicação, introduz a tua chave.</p>
+        <div style="text-align:left; margin-bottom:12px;">
+          <label style="display:block; font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:4px; font-weight:bold;">Telemóvel ou Email</label>
+          <input type="text" id="act-id" placeholder="Ex: 912345678" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--chalk); font-size:14px; box-sizing:border-box;">
+        </div>
+        <div style="text-align:left; margin-bottom:20px;">
+          <label style="display:block; font-size:10px; color:var(--muted); text-transform:uppercase; margin-bottom:4px; font-weight:bold;">Chave de Ativação</label>
+          <input type="text" id="act-key" placeholder="Ex: A4F9B2" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--surface-2); color:var(--chalk); font-size:14px; box-sizing:border-box; text-transform:uppercase;">
+        </div>
+        <button style="width:100%; padding:12px; background:var(--gold); color:#000; border:none; border-radius:8px; font-weight:bold; font-size:14px; cursor:pointer;" onclick="activateApp()">Desbloquear</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderHome() {
+  return `
+    <div class="topbar" style="position:relative; z-index: 10;">
+      <!-- ÍCONE DE DEFINIÇÕES (Topo Direito) -->
+      <div style="position:absolute; top:16px; right:16px; z-index:9999; cursor:pointer; padding:10px; font-size: 24px;" onclick="if(typeof openSettings==='function'){openSettings()}else{alert('Função openSettings não encontrada!');}">
+        ⚙️
+      </div>
+      
+      <!-- LUVA GK PRO AQUI -->
+      <div style="margin-top: 20px; margin-bottom: -10px;">
+        ${gloveIconSvg(75)}
+      </div>
+      
+      <h1 style="margin-top: 16px;">COACHFOLIO</h1>
+      <p class="subtitle">GK PRO</p>
+      <p class="author">${state.myClubName ? state.myClubName + ' • ' : ''}${state.escalao || 'Guarda-Redes'} — by Pedro Silva</p>
+    </div>
+    
+    <!-- 4 MÓDULOS NA ORDEM DA BARRA DE NAVEGAÇÃO -->
+    <div class="card" onclick="navigate('planeamento')" style="cursor:pointer; margin-bottom: 12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:var(--gold-dim); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:var(--chalk);">PLANEAMENTO</div>
+          <div style="font-size:11px; color:var(--muted);">Microciclo, Mesociclo & Treinos</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" onclick="navigate('jogo')" style="cursor:pointer; margin-bottom: 12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:var(--gold-dim); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:var(--chalk);">DIA DE JOGO</div>
+          <div style="font-size:11px; color:var(--muted);">Avaliação GR em tempo real</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" onclick="navigate('tatica')" style="cursor:pointer; margin-bottom: 12px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:var(--gold-dim); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:var(--chalk);">TÁTICA</div>
+          <div style="font-size:11px; color:var(--muted);">Quadro Tático Interativo</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card" onclick="navigate('equipa')" style="cursor:pointer;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; background:var(--gold-dim); border-radius:8px; display:flex; align-items:center; justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div style="font-size:14px; font-weight:bold; color:var(--chalk);">EQUIPA</div>
+          <div style="font-size:11px; color:var(--muted);">Plantel de Guarda-Redes</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="footer">
+      <p>CoachFolio GK Pro</p>
+      <p style="margin-top:4px;">"Feito por treinadores, para treinadores de GR."</p>
+      <p style="margin-top:8px;">Desenvolvido por: <a href="https://instagram.com/coachfolio.app" target="_blank">@coachfolio.app</a></p>
+      <p style="margin-top:8px;">© 2026 CoachFolio. Todos os direitos reservados.</p>
+    </div>
+  `;
+}
+
+// Inicialização
+window.addEventListener('DOMContentLoaded', () => {
+  if (typeof loadState === 'function') {
+    loadState().then(() => render()).catch(() => render());
+  } else {
+    render();
+  }
+});
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+          console.log('Service Worker registado com sucesso:', registration.scope);
+        })
+        .catch(error => {
+          console.log('Falha ao registar o Service Worker:', error);
+        });
+    });
+  }
+</script>
+</body>
+</html>
