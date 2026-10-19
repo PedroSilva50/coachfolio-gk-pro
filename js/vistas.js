@@ -58,11 +58,8 @@ function renderModalHTML(){
     <div class="field" style="margin-bottom:12px;"> 
       <label>Nome do Teu Clube</label> 
       <div style="display:flex; gap:8px;"> 
-        <input type="text" value="${state.myClubName || ''}" oninput="state.myClubName=this.value; saveState();" placeholder="Nome do Clube" style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-              ${state.clubNameLocked ? 'disabled' : ''} 
-              style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box; opacity:${state.clubNameLocked ? '0.6' : '1'};"> 
-        <button class="btn btn-outline" style="flex:none; padding:0 14px;" 
-                onclick="event.stopPropagation(); state.clubNameLocked = !state.clubNameLocked; saveState(); document.getElementById('modal-root').innerHTML = renderModalHTML();">
+        <input type="text" value="${state.myClubName || ''}" oninput="state.myClubName=this.value; saveState();" placeholder="Nome do Clube" ${state.clubNameLocked ? 'disabled' : ''} style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box; opacity:${state.clubNameLocked ? '0.6' : '1'};"> 
+        <button class="btn btn-outline" style="flex:none; padding:0 14px; border-color:var(--gold); color:var(--gold);" onclick="event.stopPropagation(); state.clubNameLocked = !state.clubNameLocked; saveState(); document.getElementById('modal-root').innerHTML = renderModalHTML();">
           ${state.clubNameLocked ? '🔒' : '✏️'}
         </button> 
       </div> 
@@ -71,15 +68,13 @@ function renderModalHTML(){
     <div class="field" style="margin-bottom:12px;"> 
       <label>Escalão / Categoria</label> 
       <div style="display:flex; gap:8px;"> 
-        <input type="text" value="${state.escalao || ''}" oninput="state.escalao=this.value; saveState();" placeholder="Ex: Seniores, Sub-19..." style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box;">
-              ${state.escalaoLocked ? 'disabled' : ''} 
-              style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box; opacity:${state.escalaoLocked ? '0.6' : '1'};"> 
-        <button class="btn btn-outline" style="flex:none; padding:0 14px;" 
-                onclick="event.stopPropagation(); state.escalaoLocked = !state.escalaoLocked; saveState(); document.getElementById('modal-root').innerHTML = renderModalHTML();">
+        <input type="text" value="${state.escalao || ''}" oninput="state.escalao=this.value; saveState();" placeholder="Ex: Seniores, Sub-19..." ${state.escalaoLocked ? 'disabled' : ''} style="flex:1; padding:10px; background:var(--surface); border:1px solid var(--line); color:var(--chalk); border-radius:8px; font-size:13px; box-sizing:border-box; opacity:${state.escalaoLocked ? '0.6' : '1'};"> 
+        <button class="btn btn-outline" style="flex:none; padding:0 14px; border-color:var(--gold); color:var(--gold);" onclick="event.stopPropagation(); state.escalaoLocked = !state.escalaoLocked; saveState(); document.getElementById('modal-root').innerHTML = renderModalHTML();">
           ${state.escalaoLocked ? '🔒' : '✏️'}
         </button> 
       </div> 
-    </div> 
+    </div>
+
 
     <div class="field" style="margin-bottom:0;"> 
       <label>Emblema / Logótipo</label> 

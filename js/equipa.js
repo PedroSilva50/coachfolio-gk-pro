@@ -667,8 +667,6 @@ window.exportGKPDF = function(gkId) {
 
   let html = `
     <div style="padding:20px; font-family:-apple-system, sans-serif; max-width:600px; margin:0 auto; background:#fff;"> 
-      
-      <!-- HEADER COM LOGÓTIPO --> 
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #D9A441; padding-bottom:12px; margin-bottom:20px;"> 
         <div> 
           <h1 style="font-size:22px; margin:0; text-transform:uppercase; color:#0E211A; font-weight:800;">FICHA INDIVIDUAL</h1> 
@@ -682,7 +680,6 @@ window.exportGKPDF = function(gkId) {
         ${logoHtml}
       </div> 
       
-      <!-- DADOS PESSOAIS --> 
       <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px;"> 
         <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;"> Dados Pessoais</h3> 
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px;"> 
@@ -695,7 +692,6 @@ window.exportGKPDF = function(gkId) {
         </div> 
       </div> 
       
-      <!-- ATRIBUTOS TÉCNICOS (Atual) --> 
       <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">⭐ Avaliação Atual</h3> 
       <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:16px;"> 
         ${gkAttributes.map(attr => { 
@@ -712,7 +708,6 @@ window.exportGKPDF = function(gkId) {
         }).join('')} 
       </div> 
       
-      <!-- RESUMO ESTATÍSTICO --> 
       <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">📊 Resumo Estatístico</h3> 
       <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px; text-align:center;"> 
         <div style="background:#F3F4F6; border-radius:6px; padding:10px;"> 
@@ -737,7 +732,10 @@ window.exportGKPDF = function(gkId) {
         </div> 
       </div> 
       
-      <!-- FOOTER COMPACTO --> 
+      <div style="font-size:8px; color:#9CA3AF; margin-top:8px; border-top:1px solid #E5E7EB; padding-top:8px;">
+        * A avaliação geral (Score %) é uma média calculada através da ponderação das ações técnicas por jogo: Excelente (3 pontos), Correto (2 pontos), Insuficiente (1 ponto) e Erro (0 pontos).
+      </div>
+
       <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:flex-end; border-top:1px solid #E5E7EB; padding-top:12px;"> 
         <div style="font-size:9px; color:#9CA3AF;"> 
           CoachFolio GK Pro — Ficha Individual<br> 

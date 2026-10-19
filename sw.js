@@ -1,4 +1,4 @@
-const CACHE_NAME = 'coachfolio-gkpro-v1b';
+const CACHE_NAME = 'coachfolio-gkpro-v1';
 const urlsToCache = [
   './',
   './index.html',
@@ -39,12 +39,9 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch (Lê da cache se não houver internet)
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      // Se encontrar na cache, devolve. Senão, vai à rede.
-      return response || fetch(event.request);
-    })
-  );
+// Ouve a mensagem para forçar a atualização imediata
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

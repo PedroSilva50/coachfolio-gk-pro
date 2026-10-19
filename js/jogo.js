@@ -972,17 +972,53 @@ function renderGKCountersReadOnly(counters) {
   return html || '<div style="font-size:11px; color:var(--muted);">Sem técnicas registadas</div>';
 }
 
+function renderGKCountersReadOnlyPrint(counters) {
+  let html = '';
+  gkMatchCategories.forEach(cat => {
+    const catTotal = cat.actions.reduce((sum, a) => {
+      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+      return sum + c.error + c.insufficient + c.correct + c.excellent;
+    }, 0);
+    if (catTotal === 0) return;
+    
+    html += `
+      <div style="margin-bottom:8px; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden;">
+        <div style="padding:8px 10px; background:#F9FAFB;"><span style="font-size:11px; color:#D9A441; font-weight:bold;">${cat.icon} ${cat.label} <span style="color:#6B7280; font-size:10px;">(${catTotal} ações)</span></span></div>
+        <div style="padding:4px 8px;">
+          ${cat.actions.map(a => {
+            const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+            const total = c.error + c.insufficient + c.correct + c.excellent;
+            if (total === 0) return '';
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #E5E7EB; font-size:11px;">
+                <span style="color:#0E211A; font-weight:bold;">${a.label}</span>
+                <span style="display:flex; gap:8px;">
+                  ${c.error > 0 ? `<span style="color:#DC2626;">❌${c.error}</span>` : ''}
+                  ${c.insufficient > 0 ? `<span style="color:#D97706;">🟠${c.insufficient}</span>` : ''}
+                  ${c.correct > 0 ? `<span style="color:#D9A441;">🟡${c.correct}</span>` : ''}
+                  ${c.excellent > 0 ? `<span style="color:#16A34A;">✅${c.excellent}</span>` : ''}
+                </span>
+              </div>
+            `;
+          }).filter(x => x).join('')}
+        </div>
+      </div>
+    `;
+  });
+  return html || '<div style="font-size:11px; color:#6B7280;">Sem técnicas registadas</div>';
+}
+
 window.printMatchPDF = function(matchId) {
   let m = (state.gkMatches || []).find(x => x.id === matchId) || (gkMatchSession && gkMatchSession.id === matchId ? gkMatchSession : null);
   if (!m) return showToast('Erro: Jogo não encontrado.');
   
   let html = `
-    <div style="font-family:Arial, sans-serif; padding:20px; max-width:600px; margin:0 auto; page-break-inside:avoid;">
+    <div style="font-family:Arial, sans-serif; padding:20px; max-width:600px; margin:0 auto; page-break-inside:avoid; background:#fff;">
       <div style="text-align:center; border-bottom:3px solid #D9A441; padding-bottom:12px; margin-bottom:20px;">
         <h1 style="color:#0E211A; margin:0; font-size:22px;">COACHFOLIO GK PRO</h1>
         <p style="color:#8FA79B; margin:4px 0 0 0; font-size:11px;">Relatório de Jogo — Guarda-Redes</p>
       </div>
-      <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px;">
+      <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; color:#0E211A;">
         <div style="display:flex; justify-content:space-between; font-size:12px;">
           <div><b>Adversário:</b> ${escapeHTML(m.opponent)}</div><div><b>Local:</b> ${m.location === 'casa' ? 'Casa' : 'Fora'}</div>
         </div>
@@ -999,31 +1035,45 @@ window.printMatchPDF = function(matchId) {
         const score = stats.score || calculateGKScore(stats);
         const scoreColor = score >= 70 ? '#16A34A' : (score >= 40 ? '#D97706' : '#DC2626');
         
-        // Verifica os golos marcados neste jogo
         const gs = stats.goalsScored || {};
         const matchGoals = (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
         
         return `
-          <div style="border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; page-break-inside:avoid;">
+          <div style="border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; page-break-inside:avoid; color:#0E211A;">
             <h2 style="color:#D9A441; margin:0 0 8px 0; font-size:16px; border-bottom:2px solid #0E211A; padding-bottom:4px;">
               🧤 ${gk ? escapeHTML(gk.name) : 'GR'} ${gk && gk.number ? '(Nº'+gk.number+')' : ''}<span style="float:right; color:${scoreColor}; font-size:14px;">${score}%</span>
             </h2>
             <div style="font-size:11px; color:#6B7280; margin-bottom:10px;">⏱️ ${totalMinutes}' em campo (${periodsStr})</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr ${matchGoals > 0 ? '1fr' : ''}; gap:8px; margin-bottom:12px;">
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
               <div style="background:#FEF2F2; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS SOFRIDOS</div><div style="font-size:20px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div></div>
-              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>${matchGoals > 0 ? `<div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS MARCADOS</div><div style="font-size:20px; font-weight:bold; color:#0E211A;">${matchGoals} ⚽</div></div>` : ''}
+              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>${matchGoals > 0 ? `<div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:8px; border-radius:6px; text-align:center; grid-column: span 2;"><div style="font-size:10px; color:#6B7280;">GOLOS MARCADOS</div><div style="font-size:20px; font-weight:bold; color:#0E211A;">${matchGoals} ⚽</div></div>` : ''}
             </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; font-size:10px;">
+              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTAS COMETIDAS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.faultsCommitted}</div></div>
+              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTAS SOFRIDAS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.faultsSuffered}</div></div>
+              <div style="background:#FEF2F2; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">PENÁLTIS COM.</div><div style="font-size:14px; font-weight:bold; color:#DC2626;">${stats.penaltyCommitted}</div></div>
+              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">CARTÕES AMARELOS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.yellowCards}</div></div>
+              <div style="background:#FEF2F2; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">CARTÕES VERMELHOS</div><div style="font-size:14px; font-weight:bold; color:#DC2626;">${stats.redCards}</div></div>
+              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTA NA ÁREA</div><div style="font-size:14px; font-weight:bold; color:#D9A441;">${stats.faultsSufferedInArea}</div></div>
+            </div>
+
             <div style="margin-bottom:12px;">
               <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">🥅 Golos Sofridos por Zona</h3>
               <div style="width:100%; max-width:220px; margin:0 auto;">${window.renderGoalSVG(stats.goalsConcededByZone, false, 220)}</div>
             </div>
             <div style="margin-bottom:12px;">
               <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">📊 Técnicas</h3>
-              ${renderGKCountersReadOnly(stats.counters || {})}
+              ${renderGKCountersReadOnlyPrint(stats.counters || {})}
             </div>
           </div>
         `;
       }).join('')}
+      
+      <div style="font-size:8px; color:#9CA3AF; margin-top:16px; border-top:1px solid #E5E7EB; padding-top:8px;">
+        * A avaliação (Score %) é calculada através da ponderação das ações técnicas: Excelente (3 pontos), Correto (2 pontos), Insuficiente (1 ponto) e Erro (0 pontos).
+      </div>
     </div>
   `;
   
