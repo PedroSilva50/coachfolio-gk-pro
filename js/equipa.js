@@ -753,15 +753,14 @@ window.exportGKPDF = function(gkId) {
     printArea.innerHTML = html;
     printArea.style.display = 'block';
     
-    // Dá tempo ao iPhone (300ms) para desenhar o HTML antes de puxar a impressora
+    // ATENÇÃO: A ordem de impressão tem de ser imediata (sem setTimeout)
+    // para o iPhone não bloquear a janela!
+    window.print();
+    
+    // Só voltamos a esconder o ecrã 1 segundo depois
     setTimeout(() => { 
-      window.print(); 
-      
-      // Só volta a esconder a página depois de a janela de PDF fechar
-      setTimeout(() => { 
-        printArea.style.display = 'none'; 
-        printArea.innerHTML = '';
-      }, 1500); 
-    }, 300);
+      printArea.style.display = 'none'; 
+      printArea.innerHTML = '';
+    }, 1000);
   }
 };
