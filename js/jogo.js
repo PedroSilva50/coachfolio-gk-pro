@@ -1100,24 +1100,19 @@ window.printMatchPDF = function(matchId) {
   
   const printArea = document.getElementById('print-area');
   if (printArea) {
-    printArea.innerHTML = `
-      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-area').style.display='none';">❌ Fechar</button>
-        <button style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-ui-bar').style.display='none'; window.print(); setTimeout(()=>document.getElementById('print-area').style.display='none', 800);">🖨️ Gerar PDF</button>
-      </div>
-      <div style="padding-top:70px; background:#fff; min-height:100vh;">
-        ${html}
-      </div>
-    `;
+    printArea.innerHTML = html;
     printArea.style.display = 'block';
-    printArea.style.position = 'fixed';
-    printArea.style.top = '0';
-    printArea.style.left = '0';
-    printArea.style.width = '100%';
-    printArea.style.height = '100%';
-    printArea.style.overflowY = 'auto';
-    printArea.style.zIndex = '99999';
-    printArea.style.background = '#fff';
+    
+    // Dá tempo ao iPhone (300ms) para desenhar o HTML antes de puxar a impressora
+    setTimeout(() => { 
+      window.print(); 
+      
+      // Só volta a esconder a página depois de a janela de PDF fechar
+      setTimeout(() => { 
+        printArea.style.display = 'none'; 
+        printArea.innerHTML = '';
+      }, 1500); 
+    }, 300);
   }
 };
 
