@@ -750,17 +750,59 @@ window.exportGKPDF = function(gkId) {
 
   const printArea = document.getElementById('print-area');
   if (printArea) {
-    printArea.innerHTML = html;
+    document.getElementById('app').style.display = 'none';
     printArea.style.display = 'block';
-    
-    // ATENÇÃO: A ordem de impressão tem de ser imediata (sem setTimeout)
-    // para o iPhone não bloquear a janela!
-    window.print();
-    
-    // Só voltamos a esconder o ecrã 1 segundo depois
-    setTimeout(() => { 
-      printArea.style.display = 'none'; 
+    printArea.innerHTML = `
+      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="fecharFicha()">❌ Fechar</button>
+        <button id="btn-export-pdf" style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="partilharFicha('Ficha_Individual_Coachfolio.jpg')">📤 Partilhar / Guardar</button>
+      </div>
+      <div id="pdf-content" style="padding-top:70px; background:#fff; min-height:100vh;">
+        ${html}
+      </div>
+    `;
+
+    window.fecharFicha = function() {
+      printArea.style.display = 'none';
       printArea.innerHTML = '';
-    }, 1000);
+      document.getElementById('app').style.display = 'block';
+    };
+
+    window.partilharFicha = async function(nome) {
+      const btn = document.getElementById('btn-export-pdf');
+      const barra = document.getElementById('print-ui-bar');
+      btn.innerHTML = '⏳ A gerar...';
+      
+      barra.style.display = 'none'; 
+      
+      try {
+        const elemento = document.getElementById('pdf-content');
+        const canvas = await html2canvas(elemento, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], nome, { type: 'image/jpeg' });
+          
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Ficha Individual CoachFolio GK',
+              text: 'Avaliação do Guarda-Redes'
+            });
+            window.fecharFicha();
+          } else {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/jpeg');
+            link.download = nome;
+            link.click();
+            barra.style.display = 'flex';
+            btn.innerHTML = '📤 Partilhar / Guardar';
+          }
+        }, 'image/jpeg', 0.9);
+      } catch (err) {
+        alert('Erro ao gerar o relatório. Tenta novamente.');
+        barra.style.display = 'flex';
+        btn.innerHTML = '📤 Partilhar / Guardar';
+      }
+    };
   }
 };
