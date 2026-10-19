@@ -748,22 +748,25 @@ window.exportGKPDF = function(gkId) {
     </div>
   `;
 
-  let printArea = document.getElementById('print-area');
-  if (!printArea) {
-    printArea = document.createElement('div');
-    printArea.id = 'print-area';
-    printArea.style.display = 'none';
-    document.body.appendChild(printArea);
-  }
-  
-  printArea.innerHTML = html;
-  
-  if (typeof window.openSafePrintModal === 'function') {
-    window.openSafePrintModal();
-  } else {
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => { printArea.innerHTML = ''; }, 1000);
-    }, 100);
+  const printArea = document.getElementById('print-area');
+  if (printArea) {
+    printArea.innerHTML = `
+      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-area').style.display='none';">❌ Fechar</button>
+        <button style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-ui-bar').style.display='none'; window.print(); setTimeout(()=>document.getElementById('print-area').style.display='none', 800);">🖨️ Gerar PDF</button>
+      </div>
+      <div style="padding-top:70px; background:#fff; min-height:100vh;">
+        ${html}
+      </div>
+    `;
+    printArea.style.display = 'block';
+    printArea.style.position = 'fixed';
+    printArea.style.top = '0';
+    printArea.style.left = '0';
+    printArea.style.width = '100%';
+    printArea.style.height = '100%';
+    printArea.style.overflowY = 'auto';
+    printArea.style.zIndex = '99999';
+    printArea.style.background = '#fff';
   }
 };

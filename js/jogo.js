@@ -520,23 +520,44 @@ window.confirmBackToGoal = function(gkId, minuteStr) {
 };
 
 function renderGKCountersInline(stats) {
-  let html = `<div style="display:grid; grid-template-columns: 1.2fr repeat(4, 1fr); gap:4px; margin-bottom:8px; padding:0 4px;"><div style="font-size:9px; color:var(--muted); font-weight:bold; text-transform:uppercase;">Técnica</div>${gkScale.map(s => `<div style="font-size:9px; color:${s.color}; font-weight:bold; text-align:center; line-height:1.2;">${s.icon}<br>${s.label}</div>`).join('')}</div>`;
+  let html = `<div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:2px; margin-bottom:8px; padding:0 4px; align-items:end;">
+    <div style="font-size:9px; color:var(--muted); font-weight:bold; text-transform:uppercase; padding-bottom:4px;">Técnica</div>
+    ${gkScale.map(s => `<div style="font-size:9px; color:${s.color}; font-weight:bold; text-align:center; line-height:1.2;">${s.icon}<br>${s.label}</div>`).join('')}
+  </div>`;
+  
   gkMatchCategories.forEach(cat => {
     const catTotal = cat.actions.reduce((sum, a) => {
       const c = stats.counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
       return sum + c.error + c.insufficient + c.correct + c.excellent;
     }, 0);
-    html += `<div style="margin-bottom:8px; border:1px solid var(--line); border-radius:8px; overflow:hidden;"><div style="padding:8px 10px; background:var(--surface-2); display:flex; justify-content:space-between; align-items:center;"><span style="font-size:11px; color:var(--gold); font-weight:bold;">${cat.icon} ${cat.label} <span style="color:var(--muted); font-size:10px;">(${catTotal} ações)</span></span></div><div style="padding:4px 8px;">${cat.actions.map(a => { const c = stats.counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 }; return renderCounterRowInline(a.id, a.label, c); }).join('')}</div></div>`;
+    html += `<div style="margin-bottom:8px; border:1px solid var(--line); border-radius:8px; overflow:hidden;">
+      <div style="padding:8px 10px; background:var(--surface-2); display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:var(--gold); font-weight:bold;">${cat.icon} ${cat.label} <span style="color:var(--muted); font-size:10px;">(${catTotal} ações)</span></span>
+      </div>
+      <div style="padding:4px 8px;">
+        ${cat.actions.map(a => { 
+          const c = stats.counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 }; 
+          return renderCounterRowInline(a.id, a.label, c); 
+        }).join('')}
+      </div>
+    </div>`;
   });
   return html;
 }
 
 function renderCounterRowInline(actionId, label, counts) {
-  return `<div style="display:grid; grid-template-columns: 1.2fr repeat(4, 1fr); gap:4px; padding:6px 4px; border-bottom:1px solid var(--line); align-items:center;"><div style="font-size:11px; color:var(--chalk); font-weight:500;">${label}</div>${gkScale.map(s => renderCounterButtonInline(actionId, s.id, s.color, counts[s.id])).join('')}</div>`;
+  return `<div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:2px; padding:6px 0; border-bottom:1px solid var(--line); align-items:center;">
+    <div style="font-size:10px; color:var(--chalk); font-weight:500; word-break:break-word; padding-right:4px; line-height:1.2;">${label}</div>
+    ${gkScale.map(s => renderCounterButtonInline(actionId, s.id, s.color, counts[s.id])).join('')}
+  </div>`;
 }
 
 function renderCounterButtonInline(actionId, type, color, value) {
-  return `<div style="display:flex; align-items:center; justify-content:center; gap:2px; background:var(--surface-2); border-radius:4px; padding:2px;"><button style="width:20px; height:20px; background:var(--red); color:#fff; border:none; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="window.updateGKMatchCounter('${actionId}','${type}',-1)">−</button><span style="min-width:16px; text-align:center; font-size:11px; font-weight:bold; color:${value > 0 ? color : 'var(--muted)'};">${value}</span><button style="width:20px; height:20px; background:var(--green); color:#000; border:none; border-radius:3px; font-size:11px; font-weight:bold; cursor:pointer;" onclick="window.updateGKMatchCounter('${actionId}','${type}',1)">+</button></div>`;
+  return `<div style="display:flex; align-items:center; justify-content:center; gap:2px; background:var(--surface-2); border-radius:4px; padding:2px;">
+    <button style="width:20px; height:20px; background:var(--red); color:#fff; border:none; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;" onclick="window.updateGKMatchCounter('${actionId}','${type}',-1)">−</button>
+    <span style="min-width:14px; text-align:center; font-size:11px; font-weight:bold; color:${value > 0 ? color : 'var(--muted)'};">${value}</span>
+    <button style="width:20px; height:20px; background:var(--green); color:#fff; border:none; border-radius:3px; font-size:12px; font-weight:bold; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center;" onclick="window.updateGKMatchCounter('${actionId}','${type}',1)">+</button>
+  </div>`;
 }
 
 window.updateGKMatchCounter = function(actionId, type, delta) {
@@ -1079,9 +1100,24 @@ window.printMatchPDF = function(matchId) {
   
   const printArea = document.getElementById('print-area');
   if (printArea) {
-    printArea.innerHTML = html;
-    printArea.style.display = 'block'; printArea.style.position = 'relative'; printArea.style.top = '0'; printArea.style.left = '0';
-    setTimeout(() => { window.print(); printArea.style.display = 'none'; }, 100);
+    printArea.innerHTML = `
+      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-area').style.display='none';">❌ Fechar</button>
+        <button style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="document.getElementById('print-ui-bar').style.display='none'; window.print(); setTimeout(()=>document.getElementById('print-area').style.display='none', 800);">🖨️ Gerar PDF</button>
+      </div>
+      <div style="padding-top:70px; background:#fff; min-height:100vh;">
+        ${html}
+      </div>
+    `;
+    printArea.style.display = 'block';
+    printArea.style.position = 'fixed';
+    printArea.style.top = '0';
+    printArea.style.left = '0';
+    printArea.style.width = '100%';
+    printArea.style.height = '100%';
+    printArea.style.overflowY = 'auto';
+    printArea.style.zIndex = '99999';
+    printArea.style.background = '#fff';
   }
 };
 
