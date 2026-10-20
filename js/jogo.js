@@ -99,7 +99,6 @@ function renderJogoAgendados() {
   const upcoming = state.upcomingMatches || [];
   let html = '<div style="padding:0 16px;">';
 
-  // LISTA DE JOGOS AGENDADOS (Compacta e expansível)
   if (upcoming.length > 0) {
     html += `<div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">`;
     upcoming.forEach(m => {
@@ -107,7 +106,6 @@ function renderJogoAgendados() {
       const isEditing = window.editingSchedMatch === m.id;
 
       if (isEditing) {
-        // FORMULÁRIO DE EDIÇÃO INLINE
         html += `
           <div class="card" style="margin:0; padding:12px; border:1px solid var(--gold);" onclick="event.stopPropagation();">
             <h3 style="color:var(--gold); margin:0 0 12px 0; font-size:13px;">✏️ Editar Agendamento</h3>
@@ -143,7 +141,6 @@ function renderJogoAgendados() {
           </div>
         `;
       } else {
-        // CARD NORMAL COMPACTO
         html += `
           <div class="card" style="margin:0; padding:12px; cursor:pointer; border:1px solid ${isExpanded ? 'var(--gold)' : 'transparent'};" onclick="window.expandedSchedMatch = window.expandedSchedMatch === '${m.id}' ? null : '${m.id}'; window.editingSchedMatch = null; render();">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -158,7 +155,6 @@ function renderJogoAgendados() {
             </div>
         `;
         
-        // ZONA EXPANDIDA (INICIAR JOGO E AÇÕES)
         if (isExpanded) {
           html += `
             <div style="border-top:1px solid var(--line); margin-top:12px; padding-top:12px;" onclick="event.stopPropagation();">
@@ -185,11 +181,9 @@ function renderJogoAgendados() {
     html += `<div class="empty" style="margin-top:0;">📅 Nenhum jogo agendado.</div>`;
   }
 
-  // BOTÃO PARA MOSTRAR FORMULÁRIO DE NOVO JOGO
   if (!window.showSchedForm) {
     html += `<button class="btn btn-outline" style="width:100%; margin-bottom:16px;" onclick="window.showSchedForm=true; window.expandedSchedMatch=null; window.editingSchedMatch=null; render();">➕ AGENDAR NOVO JOGO</button>`;
   } else {
-    // FORMULÁRIO DE NOVO AGENDAMENTO
     html += `
       <div class="card" style="margin:0 0 16px 0;">
         <h3 style="color:var(--gold); margin:0 0 12px 0; font-size:14px;">➕ Novo Agendamento</h3>
@@ -241,7 +235,7 @@ window.scheduleMatch = function() {
   if (!state.upcomingMatches) state.upcomingMatches = [];
   state.upcomingMatches.push({ id: uid(), date, opponent: opp, location, competition });
   saveState(); 
-  window.showSchedForm = false; // Esconde o form depois de agendar
+  window.showSchedForm = false; 
   render(); 
   showToast('📅 Jogo agendado com sucesso!');
 };
@@ -288,20 +282,16 @@ window.startScheduledMatch = function(id) {
     substitutions: [], cards: []
   };
 
-  // Remove dos agendados
   state.upcomingMatches = state.upcomingMatches.filter(m => m.id !== id);
   saveState(); 
-  
-  // MAGIA: Muda para a Aba Ativo automaticamente!
   window.jogoSubTab = 'ativo'; 
   render(); 
   showToast(`Jogo iniciado! ${starter.name} na baliza.`);
 };
 
 // ==========================================
-// LÓGICA DE JOGO ATIVO (CONTADORES E DADOS)
+// LÓGICA DE JOGO ATIVO
 // ==========================================
-
 function createGKStats(playerId, startMinute) {
   const stats = {
     playerId: playerId, periods: [{ start: startMinute, end: null }], goalsConceded: 0, goalsConcededByZone: {},
@@ -633,9 +623,6 @@ function showGoalZoneModal() {
   document.body.appendChild(modal);
 }
 
-// ==========================================
-// A NOVA BALIZA EM 3D E ANÁLISES (INALTERADO)
-// ==========================================
 window.renderGoalSVG = function(zones = {}, clickable = false, size = 240) {
   const w = size, h = Math.round(size * 0.6);
   const cellW = w / 3, cellH = h / 3;
@@ -944,11 +931,6 @@ window.viewMatchDetails = function(matchId) {
             <span>Liderança: <b>${'★'.repeat(stats.leadership.leadership || 0)}${'☆'.repeat(5 - (stats.leadership.leadership || 0))}</b></span>
           </div>
         </div>
-        
-        <div>
-          <h4 style="font-size:11px; font-weight:bold; color:var(--gold); margin:0 0 6px 0; text-transform:uppercase;">📊 Contadores de Técnicas</h4>
-          ${renderGKCountersReadOnly(stats.counters || {})}
-        </div>
       </div>
     `;
   });
@@ -956,213 +938,6 @@ window.viewMatchDetails = function(matchId) {
   html += `<div class="card"><button class="btn btn-gold" style="width:100%;" onclick="window.printMatchPDF('${m.id}')">📄 Exportar PDF</button></div>`;
   document.getElementById('app').innerHTML = html;
 };
-
-function renderGKCountersReadOnly(counters) {
-  let html = '';
-  gkMatchCategories.forEach(cat => {
-    const catTotal = cat.actions.reduce((sum, a) => {
-      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
-      return sum + c.error + c.insufficient + c.correct + c.excellent;
-    }, 0);
-    if (catTotal === 0) return;
-    
-    html += `
-      <div style="margin-bottom:8px; border:1px solid var(--line); border-radius:8px; overflow:hidden;">
-        <div style="padding:8px 10px; background:var(--surface-2);"><span style="font-size:11px; color:var(--gold); font-weight:bold;">${cat.icon} ${cat.label} <span style="color:var(--muted); font-size:10px;">(${catTotal} ações)</span></span></div>
-        <div style="padding:4px 8px;">
-          ${cat.actions.map(a => {
-            const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
-            const total = c.error + c.insufficient + c.correct + c.excellent;
-            if (total === 0) return '';
-            return `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--line); font-size:11px;">
-                <span style="color:var(--chalk);">${a.label}</span>
-                <span style="display:flex; gap:8px;">
-                  ${c.error > 0 ? `<span style="color:var(--red);">${c.error}</span>` : ''}
-                  ${c.insufficient > 0 ? `<span style="color:#F97316;">🟠${c.insufficient}</span>` : ''}
-                  ${c.correct > 0 ? `<span style="color:var(--yellow);">🟡${c.correct}</span>` : ''}
-                  ${c.excellent > 0 ? `<span style="color:var(--green);">✅${c.excellent}</span>` : ''}
-                </span>
-              </div>
-            `;
-          }).filter(x => x).join('')}
-        </div>
-      </div>
-    `;
-  });
-  return html || '<div style="font-size:11px; color:var(--muted);">Sem técnicas registadas</div>';
-}
-
-function renderGKCountersReadOnlyPrint(counters) {
-  let html = '';
-  gkMatchCategories.forEach(cat => {
-    const catTotal = cat.actions.reduce((sum, a) => {
-      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
-      return sum + c.error + c.insufficient + c.correct + c.excellent;
-    }, 0);
-    if (catTotal === 0) return;
-    
-    html += `
-      <div style="margin-bottom:8px; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden;">
-        <div style="padding:8px 10px; background:#F9FAFB;"><span style="font-size:11px; color:#D9A441; font-weight:bold;">${cat.icon} ${cat.label} <span style="color:#6B7280; font-size:10px;">(${catTotal} ações)</span></span></div>
-        <div style="padding:4px 8px;">
-          ${cat.actions.map(a => {
-            const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
-            const total = c.error + c.insufficient + c.correct + c.excellent;
-            if (total === 0) return '';
-            return `
-              <div style="display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid #E5E7EB; font-size:11px;">
-                <span style="color:#0E211A; font-weight:bold;">${a.label}</span>
-                <span style="display:flex; gap:8px;">
-                  ${c.error > 0 ? `<span style="color:#DC2626;">❌${c.error}</span>` : ''}
-                  ${c.insufficient > 0 ? `<span style="color:#D97706;">🟠${c.insufficient}</span>` : ''}
-                  ${c.correct > 0 ? `<span style="color:#D9A441;">🟡${c.correct}</span>` : ''}
-                  ${c.excellent > 0 ? `<span style="color:#16A34A;">✅${c.excellent}</span>` : ''}
-                </span>
-              </div>
-            `;
-          }).filter(x => x).join('')}
-        </div>
-      </div>
-    `;
-  });
-  return html || '<div style="font-size:11px; color:#6B7280;">Sem técnicas registadas</div>';
-}
-
-window.printMatchPDF = function(matchId) {
-  let m = (state.gkMatches || []).find(x => x.id === matchId) || (gkMatchSession && gkMatchSession.id === matchId ? gkMatchSession : null);
-  if (!m) return showToast('Erro: Jogo não encontrado.');
-  
-  let html = `
-    <div style="font-family:Arial, sans-serif; padding:20px; max-width:600px; margin:0 auto; page-break-inside:avoid; background:#fff;">
-      <div style="text-align:center; border-bottom:3px solid #D9A441; padding-bottom:12px; margin-bottom:20px;">
-        <h1 style="color:#0E211A; margin:0; font-size:22px;">COACHFOLIO GK PRO</h1>
-        <p style="color:#8FA79B; margin:4px 0 0 0; font-size:11px;">Relatório de Jogo — Guarda-Redes</p>
-      </div>
-      <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; color:#0E211A;">
-        <div style="display:flex; justify-content:space-between; font-size:12px;">
-          <div><b>Adversário:</b> ${escapeHTML(m.opponent)}</div><div><b>Local:</b> ${m.location === 'casa' ? 'Casa' : 'Fora'}</div>
-        </div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:6px;">
-          <div><b>Competição:</b> ${m.competition}</div><div><b>Data:</b> ${m.date.split('-').reverse().join('/')}</div>
-        </div>
-        ${m.result ? `<div style="text-align:center; margin-top:12px; font-size:24px; font-weight:bold; color:#0E211A;">${m.result.us} -${m.result.them}</div>` : ''}
-      </div>
-      
-      ${Object.values(m.gkStats).map(stats => {
-        const gk = state.gkRoster.find(p => p.id === stats.playerId);
-        const totalMinutes = stats.periods.reduce((sum, p) => sum + ((p.end || m.totalDuration) - p.start), 0);
-        const periodsStr = stats.periods.map(p => `${p.start}'-${p.end || m.totalDuration}'`).join(', ');
-        const score = stats.score || calculateGKScore(stats);
-        const scoreColor = score >= 70 ? '#16A34A' : (score >= 40 ? '#D97706' : '#DC2626');
-        
-        const gs = stats.goalsScored || {};
-        const matchGoals = (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
-        
-        return `
-          <div style="border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; page-break-inside:avoid; color:#0E211A;">
-            <h2 style="color:#D9A441; margin:0 0 8px 0; font-size:16px; border-bottom:2px solid #0E211A; padding-bottom:4px;">
-              🧤 ${gk ? escapeHTML(gk.name) : 'GR'} ${gk && gk.number ? '(Nº'+gk.number+')' : ''}<span style="float:right; color:${scoreColor}; font-size:14px;">${score}%</span>
-            </h2>
-            <div style="font-size:11px; color:#6B7280; margin-bottom:10px;">⏱️ ${totalMinutes}' em campo (${periodsStr})</div>
-            
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
-              <div style="background:#FEF2F2; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS SOFRIDOS</div><div style="font-size:20px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div></div>
-              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>${matchGoals > 0 ? `<div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:8px; border-radius:6px; text-align:center; grid-column: span 2;"><div style="font-size:10px; color:#6B7280;">GOLOS MARCADOS</div><div style="font-size:20px; font-weight:bold; color:#0E211A;">${matchGoals} ⚽</div></div>` : ''}
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; font-size:10px;">
-              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTAS COMETIDAS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.faultsCommitted}</div></div>
-              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTAS SOFRIDAS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.faultsSuffered}</div></div>
-              <div style="background:#FEF2F2; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">PENÁLTIS COM.</div><div style="font-size:14px; font-weight:bold; color:#DC2626;">${stats.penaltyCommitted}</div></div>
-              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">CARTÕES AMARELOS</div><div style="font-size:14px; font-weight:bold; color:#D97706;">${stats.yellowCards}</div></div>
-              <div style="background:#FEF2F2; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">CARTÕES VERMELHOS</div><div style="font-size:14px; font-weight:bold; color:#DC2626;">${stats.redCards}</div></div>
-              <div style="background:#F9FAFB; padding:6px; border-radius:6px; text-align:center; border:1px solid #E5E7EB;"><div style="color:#6B7280; margin-bottom:2px;">FALTA NA ÁREA</div><div style="font-size:14px; font-weight:bold; color:#D9A441;">${stats.faultsSufferedInArea}</div></div>
-            </div>
-
-            <div style="margin-bottom:12px;">
-              <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">🥅 Golos Sofridos por Zona</h3>
-              <div style="width:100%; max-width:220px; margin:0 auto;">${window.renderGoalSVG(stats.goalsConcededByZone, false, 220)}</div>
-            </div>
-            <div style="margin-bottom:12px;">
-              <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">📊 Técnicas</h3>
-              ${renderGKCountersReadOnlyPrint(stats.counters || {})}
-            </div>
-          </div>
-        `;
-      }).join('')}
-      
-      <div style="font-size:8px; color:#9CA3AF; margin-top:16px; border-top:1px solid #E5E7EB; padding-top:8px;">
-        * A avaliação (Score %) é calculada através da ponderação das ações técnicas: Excelente (3 pontos), Correto (2 pontos), Insuficiente (1 ponto) e Erro (0 pontos).
-      </div>
-    </div>
-  `;
-  
-  const printArea = document.getElementById('print-area');
-  if (printArea) {
-    // Esconder a APP de fundo e mostrar o espaço branco do relatório
-    document.getElementById('app').style.display = 'none';
-    printArea.style.display = 'block';
-    printArea.innerHTML = `
-      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="fecharRelatorio()">❌ Fechar</button>
-        <button id="btn-export-pdf" style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="partilharRelatorio('Relatorio_Jogo_Coachfolio.jpg')">📤 Partilhar / Guardar</button>
-      </div>
-      <div id="pdf-content" style="padding-top:70px; background:#fff; min-height:100vh;">
-        ${html}
-      </div>
-    `;
-
-    window.fecharRelatorio = function() {
-      printArea.style.display = 'none';
-      printArea.innerHTML = '';
-      document.getElementById('app').style.display = 'block';
-    };
-
-    window.partilharRelatorio = async function(nome) {
-      const btn = document.getElementById('btn-export-pdf');
-      const barra = document.getElementById('print-ui-bar');
-      btn.innerHTML = '⏳ A gerar...';
-      
-      // Esconder a barra para não sair na fotografia
-      barra.style.display = 'none'; 
-      
-      try {
-        const elemento = document.getElementById('pdf-content');
-        // Tira uma "fotografia" em alta qualidade ao relatório
-        const canvas = await html2canvas(elemento, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-        
-        canvas.toBlob(async (blob) => {
-          const file = new File([blob], nome, { type: 'image/jpeg' });
-          
-          // Abre a partilha nativa do iPhone / Android
-          if (navigator.share && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: 'Relatório CoachFolio GK',
-              text: 'Relatório de Jogo do Guarda-Redes'
-            });
-            window.fecharRelatorio(); // Fecha o ecrã se partilhar com sucesso
-          } else {
-            // Plano B (se estiver no PC): Faz download do ficheiro
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/jpeg');
-            link.download = nome;
-            link.click();
-            barra.style.display = 'flex';
-            btn.innerHTML = '📤 Partilhar / Guardar';
-          }
-        }, 'image/jpeg', 0.9);
-      } catch (err) {
-        alert('Erro ao gerar o relatório. Tenta novamente.');
-        barra.style.display = 'flex';
-        btn.innerHTML = '📤 Partilhar / Guardar';
-      }
-    };
-  }
-};
-
-window.printGKMatchPDF = function() { if (gkMatchSession) window.printMatchPDF(gkMatchSession.id); };
 
 window.deleteGKMatch = function(matchId) {
   const m = state.gkMatches.find(x => x.id === matchId);
@@ -1239,3 +1014,189 @@ function escapeHTML(str) {
   if (!str) return '';
   return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
+
+function renderGKCountersReadOnlyPrint(counters) {
+  const categories = typeof localGkMatchCategories !== 'undefined' ? localGkMatchCategories : (typeof gkMatchCategories !== 'undefined' ? gkMatchCategories : []);
+  
+  let hasData = false;
+  let html = `
+    <div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:4px; padding:0 8px 8px 8px; align-items:end;">
+      <div style="font-size:10px; color:#6B7280; font-weight:bold; text-transform:uppercase; padding-bottom:4px;">Técnica</div>
+      <div style="font-size:10px; color:#DC2626; font-weight:bold; text-align:center; line-height:1.3;">❌<br>Erro<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(0 pts)</span></div>
+      <div style="font-size:10px; color:#D97706; font-weight:bold; text-align:center; line-height:1.3;">🟠<br>Insuficiente<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(1 pt)</span></div>
+      <div style="font-size:10px; color:#D9A441; font-weight:bold; text-align:center; line-height:1.3;">🟡<br>Correto<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(2 pts)</span></div>
+      <div style="font-size:10px; color:#16A34A; font-weight:bold; text-align:center; line-height:1.3;">✅<br>Excelente<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(3 pts)</span></div>
+    </div>
+  `;
+
+  categories.forEach(cat => {
+    const catTotal = cat.actions.reduce((sum, a) => {
+      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+      return sum + c.error + c.insufficient + c.correct + c.excellent;
+    }, 0);
+    
+    if (catTotal === 0) return;
+    hasData = true;
+    
+    html += `
+      <div style="margin-bottom:8px; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden;">
+        <div style="padding:8px 10px; background:#F9FAFB;">
+          <span style="font-size:11px; color:#D9A441; font-weight:bold;">${cat.icon} ${cat.label} <span style="color:#6B7280; font-size:10px;">(${catTotal} ações)</span></span>
+        </div>
+        <div style="padding:0 8px;">
+    `;
+
+    cat.actions.forEach(a => {
+      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+      const total = c.error + c.insufficient + c.correct + c.excellent;
+      if (total === 0) return;
+      
+      const getBlock = (val, color) => {
+        const valStr = val > 0 ? val : '-';
+        const colorStr = val > 0 ? color : '#D1D5DB';
+        const opStr = val > 0 ? '1' : '0.5';
+        return `
+          <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:4px; padding:4px 0; text-align:center;">
+            <span style="font-size:12px; font-weight:bold; color:${colorStr}; opacity:${opStr};">${valStr}</span>
+          </div>
+        `;
+      };
+
+      html += `
+        <div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:4px; padding:6px 0; border-bottom:1px solid #E5E7EB; align-items:center;">
+          <div style="font-size:10px; color:#111827; font-weight:bold; word-break:break-word; padding-right:4px; line-height:1.2;">${a.label}</div>
+          ${getBlock(c.error, '#DC2626')}
+          ${getBlock(c.insufficient, '#D97706')}
+          ${getBlock(c.correct, '#D9A441')}
+          ${getBlock(c.excellent, '#16A34A')}
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+  
+  if (hasData) {
+    html += `
+      <div style="font-size:8px; color:#9CA3AF; margin-top:8px; line-height:1.4;">
+        * <b>Score (%)</b>: Calculado pela média de eficácia. O total de pontos obtidos é dividido pelos pontos máximos possíveis (Total de ações multiplicadas por 3 pts).
+      </div>
+    `;
+  }
+  
+  return hasData ? html : '<div style="font-size:11px; color:#6B7280;">Sem técnicas registadas.</div>';
+}
+
+window.printMatchPDF = function(matchId) {
+  let m = (state.gkMatches || []).find(x => x.id === matchId) || (gkMatchSession && gkMatchSession.id === matchId ? gkMatchSession : null);
+  if (!m) return showToast('Erro: Jogo não encontrado.');
+  
+  let html = `
+    <div style="font-family:Arial, sans-serif; padding:20px; max-width:600px; margin:0 auto; page-break-inside:avoid; background:#fff;">
+      <div style="text-align:center; border-bottom:3px solid #D9A441; padding-bottom:12px; margin-bottom:20px;">
+        <h1 style="color:#0E211A; margin:0; font-size:22px;">COACHFOLIO GK PRO</h1>
+        <p style="color:#8FA79B; margin:4px 0 0 0; font-size:11px;">Relatório de Jogo — Guarda-Redes</p>
+      </div>
+      <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; color:#0E211A;">
+        <div style="display:flex; justify-content:space-between; font-size:12px;">
+          <div><b>Adversário:</b> ${escapeHTML(m.opponent)}</div><div><b>Local:</b> ${m.location === 'casa' ? 'Casa' : 'Fora'}</div>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:6px;">
+          <div><b>Competição:</b> ${m.competition}</div><div><b>Data:</b> ${m.date.split('-').reverse().join('/')}</div>
+        </div>
+        ${m.result ? `<div style="text-align:center; margin-top:12px; font-size:24px; font-weight:bold; color:#0E211A;">${m.result.us} -${m.result.them}</div>` : ''}
+      </div>
+      
+      ${Object.values(m.gkStats).map(stats => {
+        const gk = state.gkRoster.find(p => p.id === stats.playerId);
+        const totalMinutes = stats.periods.reduce((sum, p) => sum + ((p.end || m.totalDuration) - p.start), 0);
+        const periodsStr = stats.periods.map(p => `${p.start}'-${p.end || m.totalDuration}'`).join(', ');
+        const score = stats.score || calculateGKScore(stats);
+        const scoreColor = score >= 70 ? '#16A34A' : (score >= 40 ? '#D97706' : '#DC2626');
+        
+        const gs = stats.goalsScored || {};
+        const matchGoals = (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
+        
+        return `
+          <div style="border:1px solid #E5E7EB; border-radius:8px; padding:12px; margin-bottom:16px; page-break-inside:avoid; color:#0E211A;">
+            <h2 style="color:#D9A441; margin:0 0 8px 0; font-size:16px; border-bottom:2px solid #0E211A; padding-bottom:4px;">
+              🧤 ${gk ? escapeHTML(gk.name) : 'GR'} ${gk && gk.number ? '(Nº'+gk.number+')' : ''}<span style="float:right; color:${scoreColor}; font-size:14px;">${score}%</span>
+            </h2>
+            <div style="font-size:11px; color:#6B7280; margin-bottom:10px;">⏱️ ${totalMinutes}' em campo (${periodsStr})</div>
+            
+            <div style="display:grid; grid-template-columns:1fr 1fr ${matchGoals > 0 ? '1fr' : ''}; gap:8px; margin-bottom:12px;">
+              <div style="background:#FEF2F2; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS SOFRIDOS</div><div style="font-size:20px; font-weight:bold; color:#DC2626;">${stats.goalsConceded}</div></div>
+              <div style="background:#F0FDF4; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">DEFESAS</div><div style="font-size:20px; font-weight:bold; color:#16A34A;">${calculateTotalSaves(stats)}</div></div>${matchGoals > 0 ? `<div style="background:#F9FAFB; border:1px solid #E5E7EB; padding:8px; border-radius:6px; text-align:center;"><div style="font-size:10px; color:#6B7280;">GOLOS MARCADOS</div><div style="font-size:20px; font-weight:bold; color:#0E211A;">${matchGoals} ⚽</div></div>` : ''}
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">🥅 Golos Sofridos por Zona</h3>
+              <div style="width:100%; max-width:220px; margin:0 auto;">${window.renderGoalSVG(stats.goalsConcededByZone, false, 220)}</div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <h3 style="font-size:12px; font-weight:bold; color:#0E211A; margin:0 0 8px 0;">📊 Técnicas Realizadas</h3>
+              ${renderGKCountersReadOnlyPrint(stats.counters || {})}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  
+  const printArea = document.getElementById('print-area');
+  if (printArea) {
+    document.getElementById('app').style.display = 'none';
+    printArea.style.display = 'block';
+    printArea.innerHTML = `
+      <div id="print-ui-bar" style="position:fixed; top:0; left:0; right:0; background:#0E211A; padding:16px; display:flex; justify-content:space-between; align-items:center; z-index:100000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+        <button style="background:transparent; border:1px solid #D9A441; color:#D9A441; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="fecharRelatorio()">❌ Fechar</button>
+        <button id="btn-export-pdf" style="background:#D9A441; color:#0E211A; border:none; padding:8px 16px; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;" onclick="partilharRelatorio('Relatorio_Jogo_Coachfolio.jpg')">📤 Partilhar / Guardar</button>
+      </div>
+      <div id="pdf-content" style="padding-top:70px; background:#fff; min-height:100vh;">
+        ${html}
+      </div>
+    `;
+
+    window.fecharRelatorio = function() {
+      printArea.style.display = 'none';
+      printArea.innerHTML = '';
+      document.getElementById('app').style.display = 'block';
+    };
+
+    window.partilharRelatorio = async function(nome) {
+      const btn = document.getElementById('btn-export-pdf');
+      const barra = document.getElementById('print-ui-bar');
+      btn.innerHTML = '⏳ A gerar...';
+      barra.style.display = 'none'; 
+      
+      try {
+        const elemento = document.getElementById('pdf-content');
+        const canvas = await html2canvas(elemento, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+        
+        window.fecharRelatorio();
+
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], nome, { type: 'image/jpeg' });
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: 'Relatório CoachFolio GK',
+              text: 'Relatório de Jogo do Guarda-Redes'
+            });
+          } else {
+            const link = document.createElement('a');
+            link.href = canvas.toDataURL('image/jpeg');
+            link.download = nome;
+            link.click();
+          }
+        }, 'image/jpeg', 0.9);
+      } catch (err) {
+        alert('Erro ao gerar o relatório. Tenta novamente.');
+        window.fecharRelatorio();
+      }
+    };
+  }
+};

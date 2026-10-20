@@ -20,6 +20,12 @@ const gkAttributes = [
   { id: 'footwork', label: 'Jogo com os Pés', icon: '👟' }
 ];
 
+// Categorias locais (para segurança no PDF da Ficha Individual)
+const localGkMatchCategories = [
+  { id: 'defesas', icon: '🤚', label: 'Defesas', actions: [ { id: 'parede', label: 'Parede' }, { id: 'queda', label: 'Queda' }, { id: 'barreirista', label: 'Barreirista' }, { id: 'def_alta', label: 'Def.Alta' }, { id: '1vs1', label: '1vs1' }, { id: 'inferioridades', label: 'Inferioridades' } ] },
+  { id: 'bola', icon: '🦶', label: 'Com Bola', actions: [ { id: 'reposicao_mao', label: 'Reposição Mão' }, { id: 'reposicao_pe', label: 'Reposição Pé' } ] }
+];
+
 // ==========================================
 // RENDER PRINCIPAL — ABA EQUIPA
 // ==========================================
@@ -494,6 +500,7 @@ function calculateGKAvgScore(gkId) {
 function calculateGKFullStats(gkId) {
   const matches = (state.gkMatches || []).filter(m => m.gkStats && m.gkStats[gkId]);
   let totalMinutes = 0; let totalGoalsConceded = 0; let totalSaves = 0; let totalScore = 0; let totalGoalsScored = 0;
+  let totalCounters = {}; // Para guardar o detalhe técnico
 
   matches.forEach(m => {
     const stats = m.gkStats[gkId];
@@ -511,6 +518,17 @@ function calculateGKFullStats(gkId) {
     const gs = stats.goalsScored || {};
     totalGoalsScored += (gs['5vs4'] || 0) + (gs['remate-defensivo'] || 0) + (gs['remate-ofensivo'] || 0);
 
+    // Soma os contadores detalhados para a Ficha PDF
+    if (stats.counters) {
+        Object.keys(stats.counters).forEach(actionId => {
+            if (!totalCounters[actionId]) totalCounters[actionId] = { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+            totalCounters[actionId].error += stats.counters[actionId].error || 0;
+            totalCounters[actionId].insufficient += stats.counters[actionId].insufficient || 0;
+            totalCounters[actionId].correct += stats.counters[actionId].correct || 0;
+            totalCounters[actionId].excellent += stats.counters[actionId].excellent || 0;
+        });
+    }
+
     totalScore += stats.score || 0;
   });
 
@@ -520,6 +538,7 @@ function calculateGKFullStats(gkId) {
     goalsConceded: totalGoalsConceded,
     saves: totalSaves,
     goalsScored: totalGoalsScored,
+    totalCounters: totalCounters,
     avgScore: matches.length > 0 ? Math.round(totalScore / matches.length) : 0
   };
 }
@@ -647,8 +666,85 @@ function escapeHTML(str) {
 }
 
 // ==========================================
-// EXPORTAÇÃO PDF (Lê da avaliação atual)
+// EXPORTAÇÃO PDF (Lê da avaliação atual e dos contadores totais)
 // ==========================================
+
+// Função que desenha as técnicas no PDF da Ficha Individual
+function renderGKCountersReadOnlyPrint(counters) {
+  const categories = typeof localGkMatchCategories !== 'undefined' ? localGkMatchCategories : (typeof gkMatchCategories !== 'undefined' ? gkMatchCategories : []);
+  
+  let hasData = false;
+  let html = `
+    <div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:4px; padding:0 8px 8px 8px; align-items:end;">
+      <div style="font-size:10px; color:#6B7280; font-weight:bold; text-transform:uppercase; padding-bottom:4px;">Técnica</div>
+      <div style="font-size:10px; color:#DC2626; font-weight:bold; text-align:center; line-height:1.3;">❌<br>Erro<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(0 pts)</span></div>
+      <div style="font-size:10px; color:#D97706; font-weight:bold; text-align:center; line-height:1.3;">🟠<br>Insuficiente<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(1 pt)</span></div>
+      <div style="font-size:10px; color:#D9A441; font-weight:bold; text-align:center; line-height:1.3;">🟡<br>Correto<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(2 pts)</span></div>
+      <div style="font-size:10px; color:#16A34A; font-weight:bold; text-align:center; line-height:1.3;">✅<br>Excelente<br><span style="font-size:8px; color:#9CA3AF; font-weight:normal;">(3 pts)</span></div>
+    </div>
+  `;
+
+  categories.forEach(cat => {
+    const catTotal = cat.actions.reduce((sum, a) => {
+      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+      return sum + c.error + c.insufficient + c.correct + c.excellent;
+    }, 0);
+    
+    if (catTotal === 0) return;
+    hasData = true;
+    
+    html += `
+      <div style="margin-bottom:8px; border:1px solid #E5E7EB; border-radius:8px; overflow:hidden;">
+        <div style="padding:8px 10px; background:#F9FAFB;">
+          <span style="font-size:11px; color:#D9A441; font-weight:bold;">${cat.icon} ${cat.label} <span style="color:#6B7280; font-size:10px;">(${catTotal} ações)</span></span>
+        </div>
+        <div style="padding:0 8px;">
+    `;
+
+    cat.actions.forEach(a => {
+      const c = counters[a.id] || { error: 0, insufficient: 0, correct: 0, excellent: 0 };
+      const total = c.error + c.insufficient + c.correct + c.excellent;
+      if (total === 0) return;
+      
+      const getBlock = (val, color) => {
+        const valStr = val > 0 ? val : '-';
+        const colorStr = val > 0 ? color : '#D1D5DB';
+        const opStr = val > 0 ? '1' : '0.5';
+        return `
+          <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:4px; padding:4px 0; text-align:center;">
+            <span style="font-size:12px; font-weight:bold; color:${colorStr}; opacity:${opStr};">${valStr}</span>
+          </div>
+        `;
+      };
+
+      html += `
+        <div style="display:grid; grid-template-columns: 75px repeat(4, minmax(0, 1fr)); gap:4px; padding:6px 0; border-bottom:1px solid #E5E7EB; align-items:center;">
+          <div style="font-size:10px; color:#111827; font-weight:bold; word-break:break-word; padding-right:4px; line-height:1.2;">${a.label}</div>
+          ${getBlock(c.error, '#DC2626')}
+          ${getBlock(c.insufficient, '#D97706')}
+          ${getBlock(c.correct, '#D9A441')}
+          ${getBlock(c.excellent, '#16A34A')}
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+  
+  if (hasData) {
+    html += `
+      <div style="font-size:8px; color:#9CA3AF; margin-top:8px; line-height:1.4;">
+        * <b>Score (%)</b>: Calculado pela média de eficácia. O total de pontos obtidos é dividido pelos pontos máximos possíveis (Total de ações multiplicadas por 3 pts).
+      </div>
+    `;
+  }
+  
+  return hasData ? html : '<div style="font-size:11px; color:#6B7280;">Sem técnicas registadas.</div>';
+}
+
 window.exportGKPDF = function(gkId) {
   const gk = state.gkRoster.find(g => g.id === gkId);
   if (!gk) {
@@ -666,7 +762,7 @@ window.exportGKPDF = function(gkId) {
     : `<div style="font-size:50px; opacity:0.3;">🛡️</div>`;
 
   let html = `
-    <div style="padding:20px; font-family:-apple-system, sans-serif; max-width:600px; margin:0 auto; background:#fff;"> 
+    <div style="padding:20px; font-family:-apple-system, sans-serif; max-width:600px; margin:0 auto; background:#fff; color:#0E211A;"> 
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #D9A441; padding-bottom:12px; margin-bottom:20px;"> 
         <div> 
           <h1 style="font-size:22px; margin:0; text-transform:uppercase; color:#0E211A; font-weight:800;">FICHA INDIVIDUAL</h1> 
@@ -708,7 +804,7 @@ window.exportGKPDF = function(gkId) {
         }).join('')} 
       </div> 
       
-      <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">📊 Resumo Estatístico</h3> 
+      <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">📊 Resumo Estatístico da Época</h3> 
       <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; margin-bottom:16px; text-align:center;"> 
         <div style="background:#F3F4F6; border-radius:6px; padding:10px;"> 
           <div style="font-size:16px; font-weight:bold; color:#0E211A;">${stats.matches}</div> 
@@ -732,7 +828,10 @@ window.exportGKPDF = function(gkId) {
         </div> 
       </div> 
       
-      <div style="font-size:8px; color:#9CA3AF; margin-top:8px; border-top:1px solid #E5E7EB; padding-top:8px;">
+      <h3 style="font-size:12px; font-weight:bold; margin:0 0 8px 0; border-bottom:2px solid #0E211A; padding-bottom:4px; text-transform:uppercase; color:#0E211A;">📊 Técnicas Realizadas (Total da Época)</h3>
+      ${renderGKCountersReadOnlyPrint(stats.totalCounters || {})}
+
+      <div style="font-size:8px; color:#9CA3AF; margin-top:16px; border-top:1px solid #E5E7EB; padding-top:8px;">
         * A avaliação geral (Score %) é uma média calculada através da ponderação das ações técnicas por jogo: Excelente (3 pontos), Correto (2 pontos), Insuficiente (1 ponto) e Erro (0 pontos).
       </div>
 
@@ -772,13 +871,15 @@ window.exportGKPDF = function(gkId) {
       const btn = document.getElementById('btn-export-pdf');
       const barra = document.getElementById('print-ui-bar');
       btn.innerHTML = '⏳ A gerar...';
-      
       barra.style.display = 'none'; 
       
       try {
         const elemento = document.getElementById('pdf-content');
         const canvas = await html2canvas(elemento, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
         
+        // MAGIA AQUI: Fechar o ecrã branco assim que a foto é capturada!
+        window.fecharFicha();
+
         canvas.toBlob(async (blob) => {
           const file = new File([blob], nome, { type: 'image/jpeg' });
           
@@ -788,20 +889,16 @@ window.exportGKPDF = function(gkId) {
               title: 'Ficha Individual CoachFolio GK',
               text: 'Avaliação do Guarda-Redes'
             });
-            window.fecharFicha();
           } else {
             const link = document.createElement('a');
             link.href = canvas.toDataURL('image/jpeg');
             link.download = nome;
             link.click();
-            barra.style.display = 'flex';
-            btn.innerHTML = '📤 Partilhar / Guardar';
           }
         }, 'image/jpeg', 0.9);
       } catch (err) {
         alert('Erro ao gerar o relatório. Tenta novamente.');
-        barra.style.display = 'flex';
-        btn.innerHTML = '📤 Partilhar / Guardar';
+        window.fecharFicha();
       }
     };
   }
